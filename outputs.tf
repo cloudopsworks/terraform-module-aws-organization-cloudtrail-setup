@@ -25,5 +25,5 @@ output "cloudwatch_kms_key_alias" {
 }
 
 output "cloudwatch_log_group_name" {
-  value = aws_cloudwatch_log_group.cloudtrail[0].name
+  value = var.is_hub ? aws_cloudwatch_log_group.cloudtrail[0].name : null
 }
