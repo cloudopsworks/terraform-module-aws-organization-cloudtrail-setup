@@ -27,7 +27,7 @@ module "cloudtrail" {
   bucket                                = local.cloudtrail_bucket_name
   acl                                   = "private"
   control_object_ownership              = true
-  object_ownership                      = "ObjectWriter"
+  object_ownership                      = "BucketOwnerPreferred"
   attach_lb_log_delivery_policy         = false
   attach_elb_log_delivery_policy        = false
   attach_deny_insecure_transport_policy = true
