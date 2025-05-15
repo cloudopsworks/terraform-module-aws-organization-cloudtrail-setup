@@ -31,6 +31,7 @@ data "aws_iam_policy_document" "cloudtrail_role" {
     effect  = "Allow"
     actions = ["logs:CreateLogStream"]
     resources = [
+      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:cloudtrail-catch-all:log-stream:*_CloudTrail_*",
       "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:cloudtrail-catch-all:log-stream:${data.aws_caller_identity.current.account_id}_CloudTrail_${data.aws_region.current.name}*",
       "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:cloudtrail-catch-all:log-stream:${data.aws_organizations_organization.current.id}_*"
     ]
