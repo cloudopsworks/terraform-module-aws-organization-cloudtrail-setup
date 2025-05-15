@@ -3,5 +3,9 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-data "aws_region" "current" {}
-data "aws_organizations_organization" "current" {}
+
+variable "settings" {
+  description = "Module settings for Cloudtrail Setup"
+  type        = any
+  default     = {}
+}
