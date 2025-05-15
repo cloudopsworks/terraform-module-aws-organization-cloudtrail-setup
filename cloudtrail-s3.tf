@@ -91,7 +91,7 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     }
     actions = ["s3:PutObject"]
     resources = [
-      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/*"
     ]
     condition {
       test     = "StringEquals"
@@ -127,7 +127,7 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     }
     actions = ["s3:PutObject"]
     resources = [
-      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/*"
     ]
     condition {
       test     = "StringEquals"
@@ -152,7 +152,7 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     }
     actions = ["s3:PutObject"]
     resources = [
-      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_organizations_organization.current.id}/*"
+      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/*"
     ]
     condition {
       test     = "StringEquals"
