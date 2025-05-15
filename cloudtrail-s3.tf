@@ -7,7 +7,7 @@
 locals {
   cloudtrail_bucket_name = (
     try(var.settings.cloudtrail_bucket_name, "") != "" ? var.settings.cloudtrail_bucket_name :
-    format("%s-cloudtrail-%s", local.system_name, random_string.cloudtrail[0].result)
+    format("org-cloudtrail-%s-%s", local.system_name, random_string.cloudtrail[0].result)
   )
 }
 
