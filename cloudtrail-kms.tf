@@ -8,6 +8,20 @@ data "aws_iam_policy_document" "cloudtrail_base" {
   version = "2012-10-17"
 
   statement {
+    sid = "The key created by cloudtrail to encrypt event datastores"
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "cloudtrail.amazonaws.com"
+      ]
+      type = "Service"
+    }
+    resources = [
+      "*"
+    ]
+  }
+
+  statement {
     sid    = "Allow CloudTrail to encrypt logs"
     effect = "Allow"
     principals {
@@ -20,6 +34,13 @@ data "aws_iam_policy_document" "cloudtrail_base" {
       "kms:GenerateDataKey*"
     ]
     resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values = [
+        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
+      ]
+    }
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
@@ -72,8 +93,8 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     sid    = "Allow alias creation during setup"
     effect = "Allow"
     principals {
-      identifiers = ["*"]
       type        = "AWS"
+      identifiers = ["*"]
     }
     actions = [
       "kms:CreateAlias"
@@ -95,8 +116,8 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     sid    = "Enable cross account log decryption"
     effect = "Allow"
     principals {
-      identifiers = ["*"]
       type        = "AWS"
+      identifiers = ["*"]
     }
     actions = [
       "kms:Decrypt",
