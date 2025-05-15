@@ -47,7 +47,7 @@ data "aws_iam_policy_document" "cloudtrail_role" {
 
 resource "aws_iam_role" "cloudtrail" {
   count              = var.is_hub ? 1 : 0
-  name               = "${local.system_name}-cloudtrail-role"
+  name               = "org-cloudtrail-${local.system_name}-role"
   assume_role_policy = data.aws_iam_policy_document.assume_role[0].json
 }
 
