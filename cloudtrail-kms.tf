@@ -8,7 +8,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
   version = "2012-10-17"
 
   statement {
-    sid = "The key created by cloudtrail to encrypt event datastores"
+    sid    = "The key created by cloudtrail to encrypt event datastores"
     effect = "Allow"
     principals {
       identifiers = [
@@ -38,6 +38,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values = [
+        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_organizations_organization.current.master_account_id}:trail/${var.settings.cloudtrail_name}",
         "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
     }
@@ -45,6 +46,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
       values = [
+        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
     }
@@ -85,7 +87,10 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
-      values   = ["arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"]
+      values   = [
+        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
+        "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
+      ]
     }
   }
 
@@ -127,12 +132,18 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringEquals"
       variable = "kms:CallerAccount"
-      values   = [data.aws_caller_identity.current.account_id]
+      values   = [
+        data.aws_caller_identity.current.account_id,
+        data.aws_organizations_organization.current.master_account_id
+      ]
     }
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
-      values   = ["arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"]
+      values   = [
+        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
+        "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
+      ]
     }
   }
 }
