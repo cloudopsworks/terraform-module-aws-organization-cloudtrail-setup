@@ -4,6 +4,7 @@
 #            Distributed Under Apache v2.0 License
 #
 data "aws_iam_policy_document" "cloudtrail_base" {
+  count   = var.is_hub ? 1 : 0
   version = "2012-10-17"
 
   statement {
@@ -116,9 +117,10 @@ data "aws_iam_policy_document" "cloudtrail_base" {
 }
 
 data "aws_iam_policy_document" "cloudtrail_combined" {
+  count = var.is_hub ? 1 : 0
   source_policy_documents = [
-    data.aws_iam_policy_document.kms_policy.json,
-    data.aws_iam_policy_document.cloudtrail_base.json,
+    data.aws_iam_policy_document.kms_policy[0].json,
+    data.aws_iam_policy_document.cloudtrail_base[0].json,
   ]
 }
 
@@ -128,7 +130,7 @@ resource "aws_kms_key" "cloudtrail" {
   deletion_window_in_days = 15
   enable_key_rotation     = true
   is_enabled              = true
-  policy                  = data.aws_iam_policy_document.cloudtrail_combined.json
+  policy                  = data.aws_iam_policy_document.cloudtrail_combined[0].json
   tags                    = local.all_tags
 }
 

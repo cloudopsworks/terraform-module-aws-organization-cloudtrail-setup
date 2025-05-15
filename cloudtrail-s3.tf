@@ -37,7 +37,7 @@ module "cloudtrail" {
   ignore_public_acls                    = true
   restrict_public_buckets               = true
   attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.cloudtrail_s3.json
+  policy                                = data.aws_iam_policy_document.cloudtrail_s3[0].json
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {
@@ -68,6 +68,7 @@ module "cloudtrail" {
 }
 
 data "aws_iam_policy_document" "cloudtrail_s3" {
+  count   = var.is_hub ? 1 : 0
   version = "2012-10-17"
 
   statement {

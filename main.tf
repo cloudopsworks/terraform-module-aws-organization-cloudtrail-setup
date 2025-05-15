@@ -15,7 +15,7 @@ resource "aws_organizations_delegated_administrator" "this" {
 }
 
 resource "aws_cloudtrail" "this" {
-  count                         = var.is_hub ? 0 : 1
+  count                         = var.is_hub ? 1 : 0
   name                          = var.settings.cloudtrail_name
   s3_bucket_name                = module.cloudtrail.s3_bucket_id
   s3_key_prefix                 = local.cloudtrail_s3_key_prefix

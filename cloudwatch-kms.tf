@@ -5,6 +5,7 @@
 #
 
 data "aws_iam_policy_document" "kms_policy" {
+  count   = var.is_hub ? 1 : 0
   version = "2012-10-17"
 
   statement {
@@ -26,6 +27,7 @@ data "aws_iam_policy_document" "kms_policy" {
 }
 
 data "aws_iam_policy_document" "cloudwatch_policy" {
+  count   = var.is_hub ? 1 : 0
   version = "2012-10-17"
 
   statement {
@@ -131,10 +133,8 @@ resource "aws_kms_key" "cloudwatch" {
   deletion_window_in_days = 15
   enable_key_rotation     = true
   is_enabled              = true
-
-  policy = data.aws_iam_policy_document.cloudwatch_policy.json
-
-  tags = local.all_tags
+  policy                  = data.aws_iam_policy_document.cloudwatch_policy[0].json
+  tags                    = local.all_tags
 }
 
 resource "aws_kms_alias" "cloudwatch" {
