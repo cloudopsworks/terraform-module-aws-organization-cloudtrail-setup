@@ -1,4 +1,4 @@
-name: Terraform Transit Gateway Module
+name: Terraform AWS Organization Cloudtrail Setup with Cloudwatch Logs
 #logo: logo/logo.jpg
 
 license: "APACHE2"
@@ -8,23 +8,26 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
 
 description: |-
-  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+  This Terraform module sets up an AWS CloudTrail with CloudWatch Logs integration for an AWS Organization. 
+  It supports multi-region and organization-wide trails, logging to an S3 bucket, and optional encryption 
+  using KMS keys. The module also allows advanced configuration of event selectors, insight selectors, 
+  and CloudWatch log groups for enhanced monitoring and auditing.
 
 # Introduction to the project
-#introduction: |-
+introduction: |-
 #  This is an introduction.
 
 # How to use this project
-#usage: |-
+usage: |-
 
 # Example usage
-#examples: |-
+examples: |-
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
 
 include:
   - "docs/targets.md"
