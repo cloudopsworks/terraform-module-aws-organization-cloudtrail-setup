@@ -37,11 +37,11 @@ module "cloudtrail" {
   ignore_public_acls                    = true
   restrict_public_buckets               = true
   attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.cloudtrail_s3[0].json
+  policy                                = var.is_hub ? data.aws_iam_policy_document.cloudtrail_s3[0].json : null
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {
-        kms_master_key_id = aws_kms_key.cloudtrail[0].arn
+        kms_master_key_id = var.is_hub ? aws_kms_key.cloudtrail[0].arn : null
         sse_algorithm     = "aws:kms"
       }
     }
