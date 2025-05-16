@@ -5,7 +5,7 @@
 #
 
 locals {
-  cloudwatch_log_name = "/cloudtrails/${var.settings.cloudtrail_name}"
+  cloudwatch_log_name = var.is_hub ? "/cloudtrails/${var.settings.cloudtrail_name}" : null
 }
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   count             = var.is_hub ? 1 : 0
