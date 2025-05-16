@@ -7,7 +7,7 @@
 locals {
   cloudtrail_bucket_name = (
     try(var.settings.cloudtrail_bucket_name, "") != "" ? var.settings.cloudtrail_bucket_name :
-    format("%s-cloudtrail-%s", local.system_name, random_string.cloudtrail[0].result)
+    format("org-cloudtrail-%s-%s", local.system_name, random_string.cloudtrail[0].result)
   )
 }
 
@@ -27,7 +27,7 @@ module "cloudtrail" {
   bucket                                = local.cloudtrail_bucket_name
   acl                                   = "private"
   control_object_ownership              = true
-  object_ownership                      = "ObjectWriter"
+  object_ownership                      = "BucketOwnerPreferred"
   attach_lb_log_delivery_policy         = false
   attach_elb_log_delivery_policy        = false
   attach_deny_insecure_transport_policy = true
@@ -111,7 +111,7 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     resources = ["arn:aws:s3:::${local.cloudtrail_bucket_name}"]
     condition {
       test     = "StringEquals"
-      variable = "AWS:SourceArn"
+      variable = "aws:SourceArn"
       values = [
         "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
@@ -127,11 +127,11 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     }
     actions = ["s3:PutObject"]
     resources = [
-      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/*"
+      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
     ]
     condition {
       test     = "StringEquals"
-      variable = "AWS:SourceArn"
+      variable = "aws:SourceArn"
       values = [
         "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
@@ -152,11 +152,11 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     }
     actions = ["s3:PutObject"]
     resources = [
-      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/*"
+      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_organizations_organization.current.id}/*"
     ]
     condition {
       test     = "StringEquals"
-      variable = "AWS:SourceArn"
+      variable = "aws:SourceArn"
       values = [
         "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
