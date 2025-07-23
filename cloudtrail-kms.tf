@@ -1,7 +1,10 @@
 ##
-# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2025
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
 data "aws_iam_policy_document" "cloudtrail_base" {
   count   = var.is_hub ? 1 : 0
@@ -87,7 +90,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
-      values   = [
+      values = [
         "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
@@ -132,7 +135,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringEquals"
       variable = "kms:CallerAccount"
-      values   = [
+      values = [
         data.aws_caller_identity.current.account_id,
         data.aws_organizations_organization.current.master_account_id
       ]
@@ -140,7 +143,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
-      values   = [
+      values = [
         "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
