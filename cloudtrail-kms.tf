@@ -90,7 +90,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
-      values   = [
+      values = [
         "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
@@ -135,7 +135,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringEquals"
       variable = "kms:CallerAccount"
-      values   = [
+      values = [
         data.aws_caller_identity.current.account_id,
         data.aws_organizations_organization.current.master_account_id
       ]
@@ -143,7 +143,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
-      values   = [
+      values = [
         "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
