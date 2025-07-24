@@ -15,10 +15,20 @@
 
 
 
-This Terraform module sets up an AWS CloudTrail with CloudWatch Logs integration for an AWS Organization. 
-It supports multi-region and organization-wide trails, logging to an S3 bucket, and optional encryption 
-using KMS keys. The module also allows advanced configuration of event selectors, insight selectors, 
-and CloudWatch log groups for enhanced monitoring and auditing.
+This Terraform module implements a comprehensive AWS CloudTrail setup with CloudWatch Logs integration 
+for AWS Organizations. It provides centralized logging capabilities with S3 bucket storage, KMS encryption,
+and CloudWatch Logs integration. The module supports both organization-wide and account-specific trails,
+with customizable event logging, insight selection, and data retention policies. Key features include:
+- Centralized S3 bucket with KMS encryption and lifecycle policies
+- CloudWatch Logs integration with configurable retention periods
+- Multi-region and organization-wide trail support
+- Advanced event selectors for granular logging control
+- Automated insight event logging
+- Customizable log file validation
+- SNS topic integration for notifications
+- IAM roles and policies with least privilege access
+- Automatic bucket naming with custom prefix support
+- Compliance with AWS security best practices
 
 
 ---
@@ -53,7 +63,31 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 
 ## Introduction
 
+The AWS Organization CloudTrail Setup module provides a standardized approach to implementing
+audit logging and monitoring across your AWS Organization. It follows AWS security best practices
+and implements a hub-spoke model where:
 
+Hub Account (Management Account):
+- Hosts the central S3 bucket for organization-wide log storage
+- Manages KMS keys for log encryption
+- Controls CloudWatch Logs configuration
+- Defines organization-wide logging policies
+- Manages cross-account access permissions
+
+Spoke Accounts (Member Accounts):
+- Configure CloudTrail to write to the central bucket
+- Implement account-specific logging policies
+- Utilize shared KMS keys for encryption
+- Forward logs to centralized CloudWatch Logs
+
+Key Architecture Components:
+- Centralized S3 bucket with versioning and lifecycle policies
+- KMS customer managed keys for enhanced security
+- CloudWatch Logs integration with custom log groups
+- IAM roles with least privilege access
+- SNS topics for notifications and alerts
+- Cross-account access policies
+- Automatic bucket policy management
 
 ## Usage
 
@@ -62,16 +96,139 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup/releases).
 
 
+To use this module, configure your Terragrunt setup with the following structure:
 
+```hcl
+# terragrunt.hcl
+terraform {
+  source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=v1.0.0"
+}
+
+inputs = {
+  is_hub = true  # Set to true for hub account, false for spoke accounts
+  settings = {
+    cloudtrail_name = "organization-trail"
+    cloudtrail_bucket_name = "my-org-cloudtrail-bucket"  # Optional, auto-generated if not specified
+    cloudwatch_log_group_name = "cloudtrail-logs"
+    cloudtrail_expiration_days = 1825  # 5 years retention
+    include_global_service_events = true
+    is_multi_region_trail = true
+    is_organization_trail = true
+
+    # Optional configurations
+    enable_log_file_validation = true
+    enable_logging = true
+    sns_topic_name = "cloudtrail-notifications"  # Optional
+
+    # CloudWatch Logs configuration
+    cloudwatch_logs_retention_days = 30
+    enable_cloudwatch_logs = true
+  }
+
+  tags = {
+    Environment = "production"
+    Terraform   = "true"
+  }
+}
+```
 
 ## Quick Start
 
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git
+   ```
 
+2. Create a basic Terragrunt configuration:
+   ```hcl
+   # terragrunt.hcl
+   terraform {
+     source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=v1.0.0"
+   }
+
+   inputs = {
+     is_hub = true
+     settings = {
+       cloudtrail_name = "my-organization-trail"
+       is_organization_trail = true
+       is_multi_region_trail = true
+       enable_cloudwatch_logs = true
+     }
+   }
+   ```
+
+3. Initialize and apply:
+   ```bash
+   terragrunt init
+   terragrunt plan
+   terragrunt apply
+   ```
+
+4. Verify the CloudTrail setup in AWS Console:
+   - Check CloudTrail trails
+   - Verify S3 bucket creation
+   - Confirm CloudWatch Logs integration
 
 
 ## Examples
 
+1. Hub Account Setup (Management Account):
+```hcl
+# hub/terragrunt.hcl
+include {
+  path = find_in_parent_folders()
+}
 
+inputs = {
+  is_hub = true
+  settings = {
+    cloudtrail_name = "organization-trail"
+    is_organization_trail = true
+    is_multi_region_trail = true
+    enable_cloudwatch_logs = true
+    cloudwatch_logs_retention_days = 30
+  }
+}
+```
+
+2. Spoke Account Setup:
+```hcl
+# spoke/terragrunt.hcl
+include {
+  path = find_in_parent_folders()
+}
+
+inputs = {
+  is_hub = false
+  settings = {
+    cloudtrail_name = "account-specific-trail"
+    is_organization_trail = false
+    is_multi_region_trail = true
+    enable_cloudwatch_logs = true
+  }
+}
+```
+
+3. Custom Event Selectors:
+```hcl
+# custom-events/terragrunt.hcl
+inputs = {
+  is_hub = true
+  settings = {
+    cloudtrail_name = "custom-events-trail"
+    event_selector = [
+      {
+        read_write_type = "All"
+        include_management_events = true
+        data_resource = {
+          type = "AWS::S3::Object"
+          values = ["arn:aws:s3:::"]
+        }
+      }
+    ]
+  }
+}
+```
 
 
 
@@ -97,8 +254,8 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.97.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.81 |
+| <a name="provider_random"></a> [random](#provider\_random) | n/a |
 
 ## Modules
 
