@@ -11,7 +11,12 @@ data "aws_iam_policy_document" "cloudtrail_base" {
   version = "2012-10-17"
 
   statement {
-    sid    = "The key created by cloudtrail to encrypt event datastores"
+    sid = "The key created by cloudtrail to encrypt event datastores"
+    actions = [
+      "kms:Encrypt",
+      "kms:ReEncryptTo",
+      "kms:GenerateDataKey*",
+    ]
     effect = "Allow"
     principals {
       identifiers = [
