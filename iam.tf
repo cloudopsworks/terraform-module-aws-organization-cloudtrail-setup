@@ -51,7 +51,9 @@ data "aws_iam_policy_document" "cloudtrail_role" {
 resource "aws_iam_role" "cloudtrail" {
   count              = var.is_hub ? 1 : 0
   name               = "org-cloudtrail-${local.system_name}-role"
+  description        = "CloudTrail Role for ${local.system_name} managed by Terraform"
   assume_role_policy = data.aws_iam_policy_document.assume_role[0].json
+  tags               = local.all_tags
 }
 
 resource "aws_iam_role_policy" "cloudtrail" {
