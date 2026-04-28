@@ -8,32 +8,37 @@
   -->
 [![README Header][readme_header_img]][readme_header_link]
 
-[![cloudopsworks][logo]](https://cloudops.works/)
+[![cloudopsworks][logo]](https://cloudopsworks.co/)
 
 # Terraform AWS Organization Cloudtrail Setup with Cloudwatch Logs
 
 
 
 
-This Terraform module sets up an AWS CloudTrail with CloudWatch Logs integration for an AWS Organization. 
-It supports multi-region and organization-wide trails, logging to an S3 bucket, and optional encryption 
-using KMS keys. The module also allows advanced configuration of event selectors, insight selectors, 
-and CloudWatch log groups for enhanced monitoring and auditing.
+This Terraform module implements a comprehensive AWS CloudTrail setup with CloudWatch Logs integration 
+for AWS Organizations. It provides centralized logging capabilities with S3 bucket storage, KMS encryption,
+and CloudWatch Logs integration. The module supports both organization-wide and account-specific trails,
+with customizable event logging, insight selection, and data retention policies. Key features include:
+- Centralized S3 bucket with KMS encryption and lifecycle policies
+- CloudWatch Logs integration with configurable retention periods
+- Multi-region and organization-wide trail support
+- Advanced event selectors for granular logging control
+- Automated insight event logging
+- Customizable log file validation
+- SNS topic integration for notifications
+- IAM roles and policies with least privilege access
+- Automatic bucket naming with custom prefix support
+- Compliance with AWS security best practices
 
 
 ---
 
 This project is part of our comprehensive approach towards DevOps Acceleration. 
 [<img align="right" title="Share via Email" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/ios-mail.svg"/>][share_email]
-[<img align="right" title="Share on Google+" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-googleplus.svg" />][share_googleplus]
 [<img align="right" title="Share on Facebook" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-facebook.svg" />][share_facebook]
 [<img align="right" title="Share on Reddit" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-reddit.svg" />][share_reddit]
 [<img align="right" title="Share on LinkedIn" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-linkedin.svg" />][share_linkedin]
-[<img align="right" title="Share on Twitter" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
-
-
-[![Terraform Open Source Modules](https://docs.cloudops.works/images/terraform-open-source-modules.svg)][terraform_modules]
-
+[<img align="right" title="Share on X" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
 
 
 It's 100% Open Source and licensed under the [APACHE2](LICENSE).
@@ -53,7 +58,31 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 
 ## Introduction
 
+The AWS Organization CloudTrail Setup module provides a standardized approach to implementing
+audit logging and monitoring across your AWS Organization. It follows AWS security best practices
+and implements a hub-spoke model where:
 
+Hub Account (Management Account):
+- Hosts the central S3 bucket for organization-wide log storage
+- Manages KMS keys for log encryption
+- Controls CloudWatch Logs configuration
+- Defines organization-wide logging policies
+- Manages cross-account access permissions
+
+Spoke Accounts (Member Accounts):
+- Configure CloudTrail to write to the central bucket
+- Implement account-specific logging policies
+- Utilize shared KMS keys for encryption
+- Forward logs to centralized CloudWatch Logs
+
+Key Architecture Components:
+- Centralized S3 bucket with versioning and lifecycle policies
+- KMS customer managed keys for enhanced security
+- CloudWatch Logs integration with custom log groups
+- IAM roles with least privilege access
+- SNS topics for notifications and alerts
+- Cross-account access policies
+- Automatic bucket policy management
 
 ## Usage
 
@@ -62,16 +91,139 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup/releases).
 
 
+To use this module, configure your Terragrunt setup with the following structure:
 
+```hcl
+# terragrunt.hcl
+terraform {
+  source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=v1.0.0"
+}
+
+inputs = {
+  is_hub = true  # Set to true for hub account, false for spoke accounts
+  settings = {
+    cloudtrail_name = "organization-trail"
+    cloudtrail_bucket_name = "my-org-cloudtrail-bucket"  # Optional, auto-generated if not specified
+    cloudwatch_log_group_name = "cloudtrail-logs"
+    cloudtrail_expiration_days = 1825  # 5 years retention
+    include_global_service_events = true
+    is_multi_region_trail = true
+    is_organization_trail = true
+
+    # Optional configurations
+    enable_log_file_validation = true
+    enable_logging = true
+    sns_topic_name = "cloudtrail-notifications"  # Optional
+
+    # CloudWatch Logs configuration
+    cloudwatch_logs_retention_days = 30
+    enable_cloudwatch_logs = true
+  }
+
+  tags = {
+    Environment = "production"
+    Terraform   = "true"
+  }
+}
+```
 
 ## Quick Start
 
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git
+   ```
 
+2. Create a basic Terragrunt configuration:
+   ```hcl
+   # terragrunt.hcl
+   terraform {
+     source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=v1.0.0"
+   }
+
+   inputs = {
+     is_hub = true
+     settings = {
+       cloudtrail_name = "my-organization-trail"
+       is_organization_trail = true
+       is_multi_region_trail = true
+       enable_cloudwatch_logs = true
+     }
+   }
+   ```
+
+3. Initialize and apply:
+   ```bash
+   terragrunt init
+   terragrunt plan
+   terragrunt apply
+   ```
+
+4. Verify the CloudTrail setup in AWS Console:
+   - Check CloudTrail trails
+   - Verify S3 bucket creation
+   - Confirm CloudWatch Logs integration
 
 
 ## Examples
 
+1. Hub Account Setup (Management Account):
+```hcl
+# hub/terragrunt.hcl
+include {
+  path = find_in_parent_folders()
+}
 
+inputs = {
+  is_hub = true
+  settings = {
+    cloudtrail_name = "organization-trail"
+    is_organization_trail = true
+    is_multi_region_trail = true
+    enable_cloudwatch_logs = true
+    cloudwatch_logs_retention_days = 30
+  }
+}
+```
+
+2. Spoke Account Setup:
+```hcl
+# spoke/terragrunt.hcl
+include {
+  path = find_in_parent_folders()
+}
+
+inputs = {
+  is_hub = false
+  settings = {
+    cloudtrail_name = "account-specific-trail"
+    is_organization_trail = false
+    is_multi_region_trail = true
+    enable_cloudwatch_logs = true
+  }
+}
+```
+
+3. Custom Event Selectors:
+```hcl
+# custom-events/terragrunt.hcl
+inputs = {
+  is_hub = true
+  settings = {
+    cloudtrail_name = "custom-events-trail"
+    event_selector = [
+      {
+        read_write_type = "All"
+        include_management_events = true
+        data_resource = {
+          type = "AWS::S3::Object"
+          values = ["arn:aws:s3:::"]
+        }
+      }
+    ]
+  }
+}
+```
 
 
 
@@ -82,6 +234,7 @@ Available targets:
   help                                Help screen
   help/all                            Display help for all targets
   help/short                          This help short screen
+  init/%                              Initialize the project for a specific cloud provider: %S
   lint                                Lint terraform/opentofu code
   tag                                 Tag the current version
 
@@ -91,14 +244,14 @@ Available targets:
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.81 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.4 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.97.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.4 |
+| <a name="provider_random"></a> [random](#provider\_random) | n/a |
 
 ## Modules
 
@@ -129,7 +282,6 @@ Available targets:
 | [aws_iam_policy_document.cloudtrail_s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.cloudwatch_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.kms_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
-| [aws_organizations_organization.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_organization) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 
 ## Inputs
@@ -161,10 +313,9 @@ Available targets:
 
 File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup/issues), send us an [email][email] or join our [Slack Community][slack].
 
-[![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
 ## DevOps Tools
-
+[]()
 ## Slack Community
 
 
@@ -185,7 +336,7 @@ Please use the [issue tracker](https://github.com/cloudopsworks/terraform-module
 
 ## Copyrights
 
-Copyright © 2024-2025 [Cloud Ops Works LLC](https://cloudops.works)
+Copyright © 2024-2026 [Cloud Ops Works LLC](https://cloudops.works)
 
 
 
@@ -242,32 +393,31 @@ This project is maintained by [Cloud Ops Works LLC][website].
 [![README Footer][readme_footer_img]][readme_footer_link]
 [![Beacon][beacon]][website]
 
-  [logo]: https://cloudops.works/logo-300x69.svg
-  [docs]: https://cowk.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=docs
-  [website]: https://cowk.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=website
-  [github]: https://cowk.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=github
-  [jobs]: https://cowk.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=jobs
-  [hire]: https://cowk.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=hire
-  [slack]: https://cowk.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=slack
-  [linkedin]: https://cowk.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=linkedin
-  [twitter]: https://cowk.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=twitter
-  [testimonial]: https://cowk.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=testimonial
-  [office_hours]: https://cloudops.works/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=office_hours
-  [newsletter]: https://cowk.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=newsletter
-  [email]: https://cowk.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=email
-  [commercial_support]: https://cowk.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=commercial_support
-  [we_love_open_source]: https://cowk.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=we_love_open_source
-  [terraform_modules]: https://cowk.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=terraform_modules
-  [readme_header_img]: https://cloudops.works/readme/header/img
-  [readme_header_link]: https://cloudops.works/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=readme_header_link
-  [readme_footer_img]: https://cloudops.works/readme/footer/img
-  [readme_footer_link]: https://cloudops.works/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=readme_footer_link
-  [readme_commercial_support_img]: https://cloudops.works/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudops.works/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=Terraform+AWS+Organization+Cloudtrail+Setup+with+Cloudwatch+Logs&url=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
+  [logo]: https://cloudopsworks.co/images/main-logo.png
+  [docs]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=docs
+  [website]: https://cloudopsworks.co?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=website
+  [github]: https://cloudopsworks.co/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=github
+  [jobs]: https://cloudopsworks.co/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=jobs
+  [hire]: https://cloudopsworks.co/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=hire
+  [slack]: https://cloudopsworks.co/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=slack
+  [linkedin]: https://cloudopsworks.co/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=linkedin
+  [x]: https://cloudopsworks.co/x?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=x
+  [testimonial]: https://cloudopsworks.co/case-studies?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=testimonial
+  [office_hours]: https://cloudopsworks.co/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=office_hours
+  [newsletter]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=newsletter
+  [email]: https://cloudopsworks.co/contact?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=email
+  [commercial_support]: https://cloudopsworks.co/services?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=commercial_support
+  [we_love_open_source]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=we_love_open_source
+  [terraform_modules]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=terraform_modules
+  [readme_header_img]: https://cloudopsworks.co/images/readme-header.png
+  [readme_header_link]: https://cloudopsworks.co/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=readme_header_link
+  [readme_footer_img]: https://cloudopsworks.co/images/main-logo-footer.png
+  [readme_footer_link]: https://cloudopsworks.co/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=readme_footer_link
+  [readme_commercial_support_img]: https://cloudopsworks.co/readme/commercial-support/img
+  [readme_commercial_support_link]: https://cloudopsworks.co/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-organization-cloudtrail-setup&utm_content=readme_commercial_support_link
+  [share_twitter]: https://x.com/intent/tweet/?text=Terraform+AWS+Organization+Cloudtrail+Setup+with+Cloudwatch+Logs&url=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
   [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+AWS+Organization+Cloudtrail+Setup+with+Cloudwatch+Logs&url=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
   [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
   [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
   [share_email]: mailto:?subject=Terraform+AWS+Organization+Cloudtrail+Setup+with+Cloudwatch+Logs&body=https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
-  [beacon]: https://ga-beacon.cloudops.works/G-7XWMFVFXZT/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup?pixel&cs=github&cm=readme&an=terraform-module-aws-organization-cloudtrail-setup
+  [beacon]: https://ga-beacon.cloudospworks.co/G-QMZVYYN2VN/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup?pixel&cs=github&cm=readme&an=terraform-module-aws-organization-cloudtrail-setup
