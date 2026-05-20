@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -9,6 +9,10 @@
 
 locals {
   cloudtrail_s3_key_prefix = try(var.settings.cloudtrail_s3_key_prefix, "cloudtrail-catch-all")
+}
+
+data "aws_organizations_organization" "current" {
+  count = var.is_hub ? 1 : 0
 }
 
 resource "aws_organizations_delegated_administrator" "this" {
