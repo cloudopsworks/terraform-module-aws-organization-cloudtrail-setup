@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -45,7 +45,7 @@ data "aws_iam_policy_document" "cloudwatch_policy" {
     principals {
       identifiers = concat(
         [
-          "logs.${data.aws_region.current.name}.amazonaws.com",
+          "logs.${data.aws_region.current.region}.amazonaws.com",
           "logs.amazonaws.com"
         ],
         [

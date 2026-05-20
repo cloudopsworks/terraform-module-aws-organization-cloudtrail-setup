@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -46,15 +46,15 @@ data "aws_iam_policy_document" "cloudtrail_base" {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values = [
-        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_organizations_organization.current.master_account_id}:trail/${var.settings.cloudtrail_name}",
-        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
+        "arn:aws:cloudtrail:${data.aws_region.current.region}:${data.aws_organizations_organization.current[0].master_account_id}:trail/${var.settings.cloudtrail_name}",
+        "arn:aws:cloudtrail:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
     }
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
       values = [
-        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
+        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current[0].master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
     }
@@ -96,7 +96,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
       values = [
-        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
+        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current[0].master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
     }
@@ -121,7 +121,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
     condition {
       test     = "StringEquals"
       variable = "kms:ViaService"
-      values   = ["ec2.${data.aws_region.current.name}.amazonaws.com"]
+      values   = ["ec2.${data.aws_region.current.region}.amazonaws.com"]
     }
   }
 
@@ -142,14 +142,14 @@ data "aws_iam_policy_document" "cloudtrail_base" {
       variable = "kms:CallerAccount"
       values = [
         data.aws_caller_identity.current.account_id,
-        data.aws_organizations_organization.current.master_account_id
+        data.aws_organizations_organization.current[0].master_account_id
       ]
     }
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
       values = [
-        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current.master_account_id}:trail/*",
+        "arn:aws:cloudtrail:*:${data.aws_organizations_organization.current[0].master_account_id}:trail/*",
         "arn:aws:cloudtrail:*:${data.aws_caller_identity.current.account_id}:trail/*"
       ]
     }

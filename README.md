@@ -257,7 +257,7 @@ Available targets:
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_cloudtrail"></a> [cloudtrail](#module\_cloudtrail) | terraform-aws-modules/s3-bucket/aws | ~> 4.1 |
+| <a name="module_cloudtrail"></a> [cloudtrail](#module\_cloudtrail) | terraform-aws-modules/s3-bucket/aws | ~> 5.13 |
 | <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
 
 ## Resources
@@ -282,6 +282,7 @@ Available targets:
 | [aws_iam_policy_document.cloudtrail_s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.cloudwatch_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.kms_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_organizations_organization.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_organization) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 
 ## Inputs

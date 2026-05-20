@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -25,7 +25,7 @@ resource "random_string" "cloudtrail" {
 
 module "cloudtrail" {
   source                                = "terraform-aws-modules/s3-bucket/aws"
-  version                               = "~> 4.1"
+  version                               = "~> 5.13"
   create_bucket                         = var.is_hub
   bucket                                = local.cloudtrail_bucket_name
   acl                                   = "private"
@@ -116,7 +116,7 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values = [
-        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
+        "arn:aws:cloudtrail:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
     }
   }
@@ -136,7 +136,7 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values = [
-        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
+        "arn:aws:cloudtrail:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
     }
     condition {
@@ -155,13 +155,13 @@ data "aws_iam_policy_document" "cloudtrail_s3" {
     }
     actions = ["s3:PutObject"]
     resources = [
-      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_organizations_organization.current.id}/*"
+      "arn:aws:s3:::${local.cloudtrail_bucket_name}/${local.cloudtrail_s3_key_prefix}/AWSLogs/${data.aws_organizations_organization.current[0].id}/*"
     ]
     condition {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values = [
-        "arn:aws:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
+        "arn:aws:cloudtrail:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:trail/${var.settings.cloudtrail_name}"
       ]
     }
     condition {
