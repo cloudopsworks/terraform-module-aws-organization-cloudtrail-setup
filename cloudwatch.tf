@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -14,7 +14,7 @@ resource "aws_cloudwatch_log_group" "cloudtrail" {
   count             = var.is_hub ? 1 : 0
   name              = local.cloudwatch_log_name
   retention_in_days = try(var.settings.cloudwatch_expiration_days, 90)
-  kms_key_id        = aws_kms_key.cloudwatch[0].arn
+  kms_key_id        = local.cloudwatch_kms_key_arn
   tags              = local.all_tags
 }
 

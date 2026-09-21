@@ -1,6 +1,14 @@
 name: Terraform AWS Organization Cloudtrail Setup with Cloudwatch Logs
 #logo: logo/logo.jpg
 
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup/commits
+
 license: "APACHE2"
 
 copyrights:
@@ -11,17 +19,18 @@ copyrights:
 github_repo: cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
 
 description: |-
-  This Terraform module implements a comprehensive AWS CloudTrail setup with CloudWatch Logs integration 
-  for AWS Organizations. It provides centralized logging capabilities with S3 bucket storage, KMS encryption,
-  and CloudWatch Logs integration. The module supports both organization-wide and account-specific trails,
-  with customizable event logging, insight selection, and data retention policies. Key features include:
-  - Centralized S3 bucket with KMS encryption and lifecycle policies
+  This Terraform module implements a comprehensive AWS CloudTrail setup with CloudWatch Logs integration
+  for AWS Organizations. It provides centralized logging capabilities with S3 bucket storage, optional KMS
+  encryption, and CloudWatch Logs integration. The module supports both organization-wide and account-specific
+  trails, with customizable event logging, insight selection, and data retention policies. Key features include:
+  - Centralized S3 bucket with lifecycle policies
+  - KMS encryption of the trail, its bucket and the CloudWatch log group, enabled by default, with module managed
+    keys (configurable rotation, deletion window and multi-region) or existing keys
   - CloudWatch Logs integration with configurable retention periods
   - Multi-region and organization-wide trail support
   - Advanced event selectors for granular logging control
   - Automated insight event logging
   - Customizable log file validation
-  - SNS topic integration for notifications
   - IAM roles and policies with least privilege access
   - Automatic bucket naming with custom prefix support
   - Compliance with AWS security best practices
@@ -32,162 +41,265 @@ introduction: |-
   audit logging and monitoring across your AWS Organization. It follows AWS security best practices
   and implements a hub-spoke model where:
 
-  Hub Account (Management Account):
+  Hub Account (Management or delegated administrator account, `is_hub = true`):
   - Hosts the central S3 bucket for organization-wide log storage
-  - Manages KMS keys for log encryption
-  - Controls CloudWatch Logs configuration
-  - Defines organization-wide logging policies
-  - Manages cross-account access permissions
+  - Manages the KMS keys for log encryption, or consumes existing ones
+  - Controls the CloudWatch Logs configuration
+  - Defines the organization-wide trail
 
-  Spoke Accounts (Member Accounts):
-  - Configure CloudTrail to write to the central bucket
-  - Implement account-specific logging policies
-  - Utilize shared KMS keys for encryption
-  - Forward logs to centralized CloudWatch Logs
+  Spoke Accounts (`is_hub = false`):
+  - Optionally register a member account as CloudTrail delegated administrator
+  - Create no trail, bucket, key or log group of their own
 
   Key Architecture Components:
-  - Centralized S3 bucket with versioning and lifecycle policies
-  - KMS customer managed keys for enhanced security
-  - CloudWatch Logs integration with custom log groups
-  - IAM roles with least privilege access
-  - SNS topics for notifications and alerts
-  - Cross-account access policies
-  - Automatic bucket policy management
+  - Centralized S3 bucket with lifecycle policies and a bucket policy scoped to the trail
+  - KMS customer managed keys for the trail/bucket and for the CloudWatch log group, with a key policy that
+    grants CloudTrail, CloudWatch Logs and cross-account decryption within the organization
+  - CloudWatch Logs integration with a dedicated log group
+  - IAM role with least privilege access for CloudTrail log delivery
+
+  ### Encryption
+
+  Encryption is governed by `settings.encryption` and is enabled by default:
+
+  | Setting                              | Default | Effect                                                                                      |
+  |--------------------------------------|---------|---------------------------------------------------------------------------------------------|
+  | `encryption.enabled`                 | `true`  | `false` creates no key: the bucket falls back to SSE-S3, the trail and log group go unencrypted |
+  | `encryption.kms_key_id` / `kms_key_alias` | `""` | Use an existing key for the trail and bucket instead of the module managed one            |
+  | `encryption.deletion_window`         | `15`    | Deletion window in days of the module managed keys (7 to 30)                                |
+  | `encryption.rotation_enabled`        | `true`  | Automatic rotation of the module managed keys                                               |
+  | `encryption.rotation_period`         | `90`    | Rotation period in days of the module managed keys (90 to 2560)                             |
+  | `encryption.multi_region`            | `false` | Create the module managed keys as multi-region keys                                         |
+  | `cloudwatch.kms_key_id` / `kms_key_alias` | `""` | Use an existing key for the CloudWatch log group instead of the module managed one        |
+
+  An existing key handed to the module is used as is: its policy must already grant `cloudtrail.amazonaws.com`
+  (trail key) or `logs.<region>.amazonaws.com` (log group key). The trail key is never reused for the log group.
 
 # How to use this project
 usage: |-
-  To use this module, configure your Terragrunt setup with the following structure:
+  This module is consumed with Terragrunt. A new deployment is bootstrapped with the Terragrunt
+  `scaffold` command, which sources `.boilerplate/boilerplate.yml` from this repository and renders
+  `terragrunt.hcl`, `inputs.yaml` and `local-tags.json` into the current working directory.
+
+  ```sh
+  # 1. Create and enter the target deployment directory
+  mkdir -p <environment>/<region>/<spoke>/org-cloudtrail
+  cd <environment>/<region>/<spoke>/org-cloudtrail
+
+  # 2. Scaffold the module (do NOT use --working-dir)
+  terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
+
+  # 3. Edit inputs.yaml with deployment specific values
+  #    (every key and comment is pre-populated from .boilerplate/inputs.yaml)
+  vi inputs.yaml
+
+  # 4. Apply
+  terragrunt apply
+  ```
+
+  Scaffold prompts for `hub_spoke`, `is_hub` and `tags`. Answer `is_hub = true` in the account that
+  hosts the organization trail, `false` in an account that only delegates administration.
+
+  ### Generated `inputs.yaml`
+
+  Only the module specific variables live here. `is_hub`, `spoke_def`, `org` and `extra_tags` come
+  from the Terragrunt hierarchy and must not be added.
+
+  ```yaml
+  settings:                                     # (Required) Root map for the CloudTrail setup configuration
+    cloudtrail_name: "organization-trail"       # (Required when is_hub is true) Name of the CloudTrail
+    # organization:                             # (Optional) Organization delegation, only used on spoke accounts (is_hub false)
+    #   delegated: false                        # (Optional) Register account_id as CloudTrail delegated administrator; default: false
+    #   account_id: ""                          # (Required when delegated is true) Account id to register as delegated administrator
+    # cloudtrail_s3_key_prefix: "cloudtrail-catch-all"  # (Optional) S3 key prefix for the trail logs; default: "cloudtrail-catch-all"
+    # cloudtrail_bucket_name: ""                # (Optional) Custom bucket name; default: "" (org-cloudtrail-<system-name>-<random suffix>)
+    # cloudtrail_expiration_days: 1825          # (Optional) Days to retain the trail logs in S3; default: 1825 (5 years)
+    # cloudwatch_expiration_days: 90            # (Optional) Days to retain the CloudWatch log group events; default: 90
+    # cloudwatch_other_regions:                 # (Optional) Extra regions granted on the log group key for CloudWatch Logs; default: []
+    #   - "us-west-1"
+    #   - "us-east-1"
+    encryption:                                 # (Optional) KMS encryption of the trail, its S3 bucket and the CloudWatch log group; default: enabled with module managed keys
+      enabled: true                             # (Optional) Enable KMS encryption; default: true. When false no key is created or looked up: the trail
+                                                #            delivers unencrypted logs, the bucket uses SSE-S3 (AES256) and the log group uses the CloudWatch default
+      # kms_key_id: ""                          # (Optional) Existing KMS key id or ARN for the trail and its bucket; default: "" (module managed key).
+                                                #            Its policy must grant cloudtrail.amazonaws.com, the module only manages the policy of the key it creates
+      # kms_key_alias: ""                       # (Optional) Existing KMS key alias for the trail and its bucket, used only when kms_key_id is not set;
+                                                #            the "alias/" prefix is added when missing. Default: "" (module managed key)
+      # deletion_window: 15                     # (Optional) Deletion window in days for the module managed keys; default: 15. Possible values: 7 to 30
+      # rotation_enabled: true                  # (Optional) Enable automatic rotation of the module managed keys; default: true
+      # rotation_period: 90                     # (Optional) Rotation period in days for the module managed keys; default: 90. Possible values: 90 to 2560.
+                                                #            Only applies when rotation_enabled is true
+      # multi_region: false                     # (Optional) Create the module managed keys as multi-region keys; default: false
+    # cloudwatch:                               # (Optional) CloudWatch log group encryption key, only used when encryption.enabled is true
+    #   kms_key_id: ""                          # (Optional) Existing KMS key id or ARN for the log group; default: "" (module managed key).
+                                                #            Its policy must grant logs.<region>.amazonaws.com. The trail key is never reused for the log group
+    #   kms_key_alias: ""                       # (Optional) Existing KMS key alias for the log group, used only when kms_key_id is not set;
+                                                #            the "alias/" prefix is added when missing. Default: "" (module managed key)
+    # multi_region: true                        # (Optional) Multi-region trail; default: true
+    # organization_trail: true                  # (Optional) Organization trail; default: true
+    # log_file_validation: true                 # (Optional) Enable log file validation; default: true
+    # enable_logging: true                      # (Optional) Enable logging; default: true
+    # include_global_events: true               # (Optional) Include global service events; default: true
+    # trail_insight_type: ""                    # (Optional) Insight type to enable; default: "" (disabled). Possible values: "ApiCallRateInsight", "ApiErrorRateInsight"
+    # trail_event_selectors:                    # (Optional) Event selectors for the trail; default: []
+    #   - exclude_management_event_sources: []  # (Optional) Management event sources to exclude; default: []
+    #     include_management_events: false      # (Optional) Include management events; default: false
+    #     read_write_type: "ReadOnly"           # (Optional) Events to log; default: "ReadOnly". Possible values: "ReadOnly", "WriteOnly", "All"
+    #     data_resource:                        # (Optional) Data resource configuration; omit to log no data events
+    #       type: "AWS::S3::Object"             # (Optional) Data resource type; default: "AWS::S3::Object"
+    #       values: ["arn:aws:s3:::*/*"]        # (Optional) Data resource ARNs; default: all S3 objects
+    # trail_advanced_event_selectors:           # (Optional) Advanced event selectors for the trail; default: []
+    #   - name: "MyAdvancedSelector"            # (Optional) Name of the advanced event selector
+    #     field_selectors:                      # (Optional) Field selectors of the advanced event selector
+    #       - field: "eventCategory"            # (Required) Field to filter on
+    #         equals: ["Management"]            # (Optional) Values the field must equal
+    #         not_equals: ["Data"]              # (Optional) Values the field must not equal
+    #         starts_with: ["arn:aws:s3::"]     # (Optional) Prefixes the field must match
+    #         not_starts_with: ["arn:aws:ec2::"]  # (Optional) Prefixes the field must not match
+    #         ends_with: ["*"]                  # (Optional) Suffixes the field must match
+    #         not_ends_with: ["/"]              # (Optional) Suffixes the field must not match
+  ```
+
+  ### Generated `terragrunt.hcl`
+
+  Rendered by scaffold; shown here to make the wiring explicit. Do not hand-author it.
 
   ```hcl
-  # terragrunt.hcl
+  locals {
+    local_vars  = yamldecode(file("./inputs.yaml"))
+    spoke_vars  = yamldecode(file(find_in_parent_folders("spoke-inputs.yaml")))
+    region_vars = yamldecode(file(find_in_parent_folders("region-inputs.yaml")))
+    env_vars    = yamldecode(file(find_in_parent_folders("env-inputs.yaml")))
+    global_vars = yamldecode(file(find_in_parent_folders("global-inputs.yaml")))
+
+    local_tags  = jsondecode(file("./local-tags.json"))
+    spoke_tags  = jsondecode(file(find_in_parent_folders("spoke-tags.json")))
+    region_tags = jsondecode(file(find_in_parent_folders("region-tags.json")))
+    env_tags    = jsondecode(file(find_in_parent_folders("env-tags.json")))
+    global_tags = jsondecode(file(find_in_parent_folders("global-tags.json")))
+
+    tags = merge(
+      local.global_tags,
+      local.env_tags,
+      local.region_tags,
+      local.spoke_tags,
+      local.local_tags
+    )
+  }
+
+  include "root" {
+    path = find_in_parent_folders("root.hcl")
+  }
+
   terraform {
-    source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=v1.0.0"
+    source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=vX.Y.Z"
   }
 
   inputs = {
-    is_hub = true  # Set to true for hub account, false for spoke accounts
-    settings = {
-      cloudtrail_name = "organization-trail"
-      cloudtrail_bucket_name = "my-org-cloudtrail-bucket"  # Optional, auto-generated if not specified
-      cloudwatch_log_group_name = "cloudtrail-logs"
-      cloudtrail_expiration_days = 1825  # 5 years retention
-      include_global_service_events = true
-      is_multi_region_trail = true
-      is_organization_trail = true
+    org       = local.env_vars.org
+    is_hub    = true
+    spoke_def = local.spoke_vars.spoke_def
+    ## Required
 
-      # Optional configurations
-      enable_log_file_validation = true
-      enable_logging = true
-      sns_topic_name = "cloudtrail-notifications"  # Optional
-
-      # CloudWatch Logs configuration
-      cloudwatch_logs_retention_days = 30
-      enable_cloudwatch_logs = true
-    }
-
-    tags = {
-      Environment = "production"
-      Terraform   = "true"
-    }
+    ## Optional
+    settings   = try(local.local_vars.settings, {})
+    extra_tags = local.tags
   }
   ```
 
 # Example usage
 examples: |-
-  1. Hub Account Setup (Management Account):
-  ```hcl
-  # hub/terragrunt.hcl
-  include {
-    path = find_in_parent_folders()
-  }
-
-  inputs = {
-    is_hub = true
-    settings = {
-      cloudtrail_name = "organization-trail"
-      is_organization_trail = true
-      is_multi_region_trail = true
-      enable_cloudwatch_logs = true
-      cloudwatch_logs_retention_days = 30
-    }
-  }
+  1. Hub account with module managed keys (defaults):
+  ```yaml
+  # inputs.yaml
+  settings:
+    cloudtrail_name: "organization-trail"
+    cloudtrail_expiration_days: 1825
+    cloudwatch_expiration_days: 90
   ```
 
-  2. Spoke Account Setup:
-  ```hcl
-  # spoke/terragrunt.hcl
-  include {
-    path = find_in_parent_folders()
-  }
-
-  inputs = {
-    is_hub = false
-    settings = {
-      cloudtrail_name = "account-specific-trail"
-      is_organization_trail = false
-      is_multi_region_trail = true
-      enable_cloudwatch_logs = true
-    }
-  }
+  2. Hub account tuning the module managed keys:
+  ```yaml
+  # inputs.yaml
+  settings:
+    cloudtrail_name: "organization-trail"
+    encryption:
+      enabled: true
+      deletion_window: 30
+      rotation_enabled: true
+      rotation_period: 180
+      multi_region: false
   ```
 
-  3. Custom Event Selectors:
-  ```hcl
-  # custom-events/terragrunt.hcl
-  inputs = {
-    is_hub = true
-    settings = {
-      cloudtrail_name = "custom-events-trail"
-      event_selector = [
-        {
-          read_write_type = "All"
-          include_management_events = true
-          data_resource = {
-            type = "AWS::S3::Object"
-            values = ["arn:aws:s3:::"]
-          }
-        }
-      ]
-    }
-  }
+  3. Hub account with existing keys, no key created by the module:
+  ```yaml
+  # inputs.yaml
+  settings:
+    cloudtrail_name: "organization-trail"
+    encryption:
+      kms_key_alias: "alias/org-cloudtrail"     # policy must grant cloudtrail.amazonaws.com
+    cloudwatch:
+      kms_key_alias: "alias/org-cloudwatch"     # policy must grant logs.<region>.amazonaws.com
+  ```
+
+  4. Hub account without KMS encryption:
+  ```yaml
+  # inputs.yaml
+  settings:
+    cloudtrail_name: "organization-trail"
+    encryption:
+      enabled: false                            # bucket falls back to SSE-S3, trail and log group go unencrypted
+  ```
+
+  5. Spoke account delegating CloudTrail administration:
+  ```yaml
+  # inputs.yaml, with is_hub = false in terragrunt.hcl
+  settings:
+    organization:
+      delegated: true
+      account_id: "123456789012"
+  ```
+
+  6. Hub account with data events on all S3 objects:
+  ```yaml
+  # inputs.yaml
+  settings:
+    cloudtrail_name: "organization-trail"
+    trail_event_selectors:
+      - read_write_type: "All"
+        include_management_events: true
+        data_resource:
+          type: "AWS::S3::Object"
+          values: ["arn:aws:s3:::*/*"]
   ```
 
 # How to get started quickly
 quickstart: |-
-  1. Clone the repository:
-     ```bash
-     git clone https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git
+  1. Scaffold a deployment in the account that will host the organization trail:
+     ```sh
+     mkdir -p <environment>/<region>/<spoke>/org-cloudtrail
+     cd <environment>/<region>/<spoke>/org-cloudtrail
+     terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup
      ```
+     Answer `is_hub = true` at the prompt.
 
-  2. Create a basic Terragrunt configuration:
-     ```hcl
-     # terragrunt.hcl
-     terraform {
-       source = "git::https://github.com/cloudopsworks/terraform-module-aws-organization-cloudtrail-setup.git?ref=v1.0.0"
-     }
-
-     inputs = {
-       is_hub = true
-       settings = {
-         cloudtrail_name = "my-organization-trail"
-         is_organization_trail = true
-         is_multi_region_trail = true
-         enable_cloudwatch_logs = true
-       }
-     }
+  2. Set the trail name in `inputs.yaml`; encryption is on by default with module managed keys:
+     ```yaml
+     settings:
+       cloudtrail_name: "organization-trail"
      ```
 
   3. Initialize and apply:
-     ```bash
+     ```sh
      terragrunt init
      terragrunt plan
      terragrunt apply
      ```
 
-  4. Verify the CloudTrail setup in AWS Console:
-     - Check CloudTrail trails
-     - Verify S3 bucket creation
-     - Confirm CloudWatch Logs integration
+  4. Verify the setup in the AWS Console:
+     - CloudTrail trail with KMS encryption and log file validation
+     - S3 bucket with the `cloudtrail-catch-all/AWSLogs` prefix populated
+     - CloudWatch log group `/cloudtrails/<cloudtrail_name>` receiving events
 
 include:
   - "docs/targets.md"
