@@ -44,8 +44,8 @@ module "cloudtrail" {
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {
-        kms_master_key_id = var.is_hub ? aws_kms_key.cloudtrail[0].arn : null
-        sse_algorithm     = "aws:kms"
+        kms_master_key_id = local.cloudtrail_kms_key_arn
+        sse_algorithm     = local.encryption_enabled ? "aws:kms" : "AES256"
       }
     }
   }

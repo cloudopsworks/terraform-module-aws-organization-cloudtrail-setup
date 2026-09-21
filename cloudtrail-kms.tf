@@ -6,8 +6,31 @@
 #       WebSite: https://cloudops.works
 #     Distributed Under Apache v2.0 License
 #
+# Account root statement shared with the trail specific policy below. Dropping it orphans the key
+data "aws_iam_policy_document" "kms_policy" {
+  count   = local.create_cloudtrail_key ? 1 : 0
+  version = "2012-10-17"
+
+  statement {
+    sid    = "Enable IAM User Permissions"
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+      type = "AWS"
+    }
+    actions = [
+      "kms:*"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "cloudtrail_base" {
-  count   = var.is_hub ? 1 : 0
+  count   = local.create_cloudtrail_key ? 1 : 0
   version = "2012-10-17"
 
   statement {
@@ -157,7 +180,7 @@ data "aws_iam_policy_document" "cloudtrail_base" {
 }
 
 data "aws_iam_policy_document" "cloudtrail_combined" {
-  count = var.is_hub ? 1 : 0
+  count = local.create_cloudtrail_key ? 1 : 0
   source_policy_documents = [
     data.aws_iam_policy_document.kms_policy[0].json,
     data.aws_iam_policy_document.cloudtrail_base[0].json,
@@ -165,17 +188,19 @@ data "aws_iam_policy_document" "cloudtrail_combined" {
 }
 
 resource "aws_kms_key" "cloudtrail" {
-  count                   = var.is_hub ? 1 : 0
+  count                   = local.create_cloudtrail_key ? 1 : 0
   description             = "Cloudtrail encryption Key"
-  deletion_window_in_days = 15
-  enable_key_rotation     = true
+  deletion_window_in_days = local.kms_deletion_window
+  enable_key_rotation     = local.kms_rotation_enabled
+  rotation_period_in_days = local.kms_rotation_enabled ? local.kms_rotation_period : null
+  multi_region            = local.kms_multi_region
   is_enabled              = true
   policy                  = data.aws_iam_policy_document.cloudtrail_combined[0].json
   tags                    = local.all_tags
 }
 
 resource "aws_kms_alias" "cloudtrail" {
-  count         = var.is_hub ? 1 : 0
+  count         = local.create_cloudtrail_key ? 1 : 0
   target_key_id = aws_kms_key.cloudtrail[0].key_id
   name          = "alias/${local.system_name}-cloudtrail"
 }

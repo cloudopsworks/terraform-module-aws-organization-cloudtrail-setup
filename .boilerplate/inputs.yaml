@@ -1,18 +1,56 @@
 # Module configuration
-# Required variables
-{{- range .requiredVariables }}
-{{- if ne .Name "org"}}
-# Description {{ .Description }} , Type: {{ .Type }}
-{{ .Name }}: {{ .DefaultValuePlaceholder }}
-{{- end }}
+# All required and optional variables for terraform-module-aws-organization-cloudtrail-setup
+# Do NOT include: is_hub, spoke_def, org, extra_tags (managed by Terragrunt hierarchy)
 
-{{- end }}
-# Optional variables
-{{- range .optionalVariables }}
-{{- if ne .Name "is_hub" "spoke_def" "extra_args" }}
-# Description {{ .Description }} , Type: {{ .Type }}
-#{{ .Name }}: {{ .DefaultValue }}
-{{- end }}
-
-{{- end }}
-
+settings:                                     # (Required) Root map for the CloudTrail setup configuration
+  cloudtrail_name: "organization-trail"       # (Required when is_hub is true) Name of the CloudTrail
+  # organization:                             # (Optional) Organization delegation, only used on spoke accounts (is_hub false)
+  #   delegated: false                        # (Optional) Register account_id as CloudTrail delegated administrator; default: false
+  #   account_id: ""                          # (Required when delegated is true) Account id to register as delegated administrator
+  # cloudtrail_s3_key_prefix: "cloudtrail-catch-all"  # (Optional) S3 key prefix for the trail logs; default: "cloudtrail-catch-all"
+  # cloudtrail_bucket_name: ""                # (Optional) Custom bucket name; default: "" (org-cloudtrail-<system-name>-<random suffix>)
+  # cloudtrail_expiration_days: 1825          # (Optional) Days to retain the trail logs in S3; default: 1825 (5 years)
+  # cloudwatch_expiration_days: 90            # (Optional) Days to retain the CloudWatch log group events; default: 90
+  # cloudwatch_other_regions:                 # (Optional) Extra regions granted on the log group key for CloudWatch Logs; default: []
+  #   - "us-west-1"
+  #   - "us-east-1"
+  encryption:                                 # (Optional) KMS encryption of the trail, its S3 bucket and the CloudWatch log group; default: enabled with module managed keys
+    enabled: true                             # (Optional) Enable KMS encryption; default: true. When false no key is created or looked up: the trail
+                                              #            delivers unencrypted logs, the bucket uses SSE-S3 (AES256) and the log group uses the CloudWatch default
+    # kms_key_id: ""                          # (Optional) Existing KMS key id or ARN for the trail and its bucket; default: "" (module managed key).
+                                              #            Its policy must grant cloudtrail.amazonaws.com, the module only manages the policy of the key it creates
+    # kms_key_alias: ""                       # (Optional) Existing KMS key alias for the trail and its bucket, used only when kms_key_id is not set;
+                                              #            the "alias/" prefix is added when missing. Default: "" (module managed key)
+    # deletion_window: 15                     # (Optional) Deletion window in days for the module managed keys; default: 15. Possible values: 7 to 30
+    # rotation_enabled: true                  # (Optional) Enable automatic rotation of the module managed keys; default: true
+    # rotation_period: 90                     # (Optional) Rotation period in days for the module managed keys; default: 90. Possible values: 90 to 2560.
+                                              #            Only applies when rotation_enabled is true
+    # multi_region: false                     # (Optional) Create the module managed keys as multi-region keys; default: false
+  # cloudwatch:                               # (Optional) CloudWatch log group encryption key, only used when encryption.enabled is true
+  #   kms_key_id: ""                          # (Optional) Existing KMS key id or ARN for the log group; default: "" (module managed key).
+                                              #            Its policy must grant logs.<region>.amazonaws.com. The trail key is never reused for the log group
+  #   kms_key_alias: ""                       # (Optional) Existing KMS key alias for the log group, used only when kms_key_id is not set;
+                                              #            the "alias/" prefix is added when missing. Default: "" (module managed key)
+  # multi_region: true                        # (Optional) Multi-region trail; default: true
+  # organization_trail: true                  # (Optional) Organization trail; default: true
+  # log_file_validation: true                 # (Optional) Enable log file validation; default: true
+  # enable_logging: true                      # (Optional) Enable logging; default: true
+  # include_global_events: true               # (Optional) Include global service events; default: true
+  # trail_insight_type: ""                    # (Optional) Insight type to enable; default: "" (disabled). Possible values: "ApiCallRateInsight", "ApiErrorRateInsight"
+  # trail_event_selectors:                    # (Optional) Event selectors for the trail; default: []
+  #   - exclude_management_event_sources: []  # (Optional) Management event sources to exclude; default: []
+  #     include_management_events: false      # (Optional) Include management events; default: false
+  #     read_write_type: "ReadOnly"           # (Optional) Events to log; default: "ReadOnly". Possible values: "ReadOnly", "WriteOnly", "All"
+  #     data_resource:                        # (Optional) Data resource configuration; omit to log no data events
+  #       type: "AWS::S3::Object"             # (Optional) Data resource type; default: "AWS::S3::Object"
+  #       values: ["arn:aws:s3:::*/*"]        # (Optional) Data resource ARNs; default: all S3 objects
+  # trail_advanced_event_selectors:           # (Optional) Advanced event selectors for the trail; default: []
+  #   - name: "MyAdvancedSelector"            # (Optional) Name of the advanced event selector
+  #     field_selectors:                      # (Optional) Field selectors of the advanced event selector
+  #       - field: "eventCategory"            # (Required) Field to filter on
+  #         equals: ["Management"]            # (Optional) Values the field must equal
+  #         not_equals: ["Data"]              # (Optional) Values the field must not equal
+  #         starts_with: ["arn:aws:s3::"]     # (Optional) Prefixes the field must match
+  #         not_starts_with: ["arn:aws:ec2::"]  # (Optional) Prefixes the field must not match
+  #         ends_with: ["*"]                  # (Optional) Suffixes the field must match
+  #         not_ends_with: ["/"]              # (Optional) Suffixes the field must not match

@@ -7,30 +7,8 @@
 #     Distributed Under Apache v2.0 License
 #
 
-data "aws_iam_policy_document" "kms_policy" {
-  count   = var.is_hub ? 1 : 0
-  version = "2012-10-17"
-
-  statement {
-    sid    = "Enable IAM User Permissions"
-    effect = "Allow"
-    principals {
-      identifiers = [
-        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-      ]
-      type = "AWS"
-    }
-    actions = [
-      "kms:*"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-}
-
 data "aws_iam_policy_document" "cloudwatch_policy" {
-  count   = var.is_hub ? 1 : 0
+  count   = local.create_cloudwatch_key ? 1 : 0
   version = "2012-10-17"
 
   statement {
@@ -131,17 +109,19 @@ data "aws_iam_policy_document" "cloudwatch_policy" {
 }
 
 resource "aws_kms_key" "cloudwatch" {
-  count                   = var.is_hub ? 1 : 0
+  count                   = local.create_cloudwatch_key ? 1 : 0
   description             = "Cloudwatch general encryption Key"
-  deletion_window_in_days = 15
-  enable_key_rotation     = true
+  deletion_window_in_days = local.kms_deletion_window
+  enable_key_rotation     = local.kms_rotation_enabled
+  rotation_period_in_days = local.kms_rotation_enabled ? local.kms_rotation_period : null
+  multi_region            = local.kms_multi_region
   is_enabled              = true
   policy                  = data.aws_iam_policy_document.cloudwatch_policy[0].json
   tags                    = local.all_tags
 }
 
 resource "aws_kms_alias" "cloudwatch" {
-  count         = var.is_hub ? 1 : 0
+  count         = local.create_cloudwatch_key ? 1 : 0
   target_key_id = aws_kms_key.cloudwatch[0].key_id
   name          = "alias/${local.system_name}-cloudwatch"
 }

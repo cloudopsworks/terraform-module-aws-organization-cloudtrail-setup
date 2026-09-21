@@ -30,7 +30,7 @@ resource "aws_cloudtrail" "this" {
   is_organization_trail         = try(var.settings.organization_trail, true)
   enable_log_file_validation    = try(var.settings.log_file_validation, true)
   enable_logging                = try(var.settings.enable_logging, true)
-  kms_key_id                    = aws_kms_key.cloudtrail[0].arn
+  kms_key_id                    = local.cloudtrail_kms_key_arn
   cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail[0].arn}:*"
   cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail[0].arn
   include_global_service_events = try(var.settings.include_global_events, true)
